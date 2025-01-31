@@ -1,21 +1,28 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim-buster
+FROM python:alpine3.16
 
-# Set the working directory to /app
-WORKDIR /app
+# Install tini to manage processes
+RUN apk add --no-cache tini
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt .
+# Set the environment variables
+ENV TINI_SUBREAPER=1
 
-# Install the required packages
-RUN pip install --no-cache-dir -r requirements.txt
+# Set the working directory to /workspace
+WORKDIR /workspace
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy the project files into the container at /workspace
+COPY requirements.txt \
+     main.py \
+     main_test.py \
+     data.json .
 
-# Expose port 8080 for the FastAPI web API
-EXPOSE 8080
+# Install the requirements
+RUN pip install --no-cache-dir --requirement requirements.txt
 
-# Start the FastAPI app using uvicorn
-CMD ["python", "app.py"]
+# Expose port 3000
+EXPOSE 3000
+
+# Start the server using tini, then uvicorn
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000"]
 
